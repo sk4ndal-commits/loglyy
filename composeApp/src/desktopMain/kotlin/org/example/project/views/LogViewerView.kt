@@ -1,4 +1,4 @@
-package org.example.project.ui
+package org.example.project.views
 
 import ContentView
 import androidx.compose.foundation.layout.Column
@@ -12,8 +12,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.example.project.ui.footer.FooterView
-import org.example.project.ui.header.HeaderView
+import org.example.project.views.footer.FooterView
+import org.example.project.views.header.HeaderView
 
 @Composable
 fun LogViewerView(isDarkTheme: MutableState<Boolean>)

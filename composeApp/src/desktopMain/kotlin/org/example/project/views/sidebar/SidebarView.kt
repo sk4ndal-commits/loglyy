@@ -1,4 +1,4 @@
-package org.example.project.ui.sidebar
+package org.example.project.views.sidebar
 
 import SearchBarView
 import androidx.compose.foundation.layout.*

@@ -1,4 +1,4 @@
-package org.example.project.ui.sidebar
+package org.example.project.views.sidebar
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
@@ -9,11 +9,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun SavedProfilesListView()
-{
-    // Placeholder for saved profiles list
+fun LogMessageDetailView(message: String) {
     Text(
-        "No saved profiles",
+        text = message,
         fontSize = 12.sp,
         color = Color.Gray,
         modifier = Modifier.padding(top = 8.dp)

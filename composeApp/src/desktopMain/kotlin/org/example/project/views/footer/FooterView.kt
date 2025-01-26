@@ -1,4 +1,4 @@
-package org.example.project.ui.footer
+package org.example.project.views.footer
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.BottomAppBar

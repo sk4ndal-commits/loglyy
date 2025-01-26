@@ -13,18 +13,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import org.example.project.data.LogRow
 import org.example.project.readers.TextLogFileReader
 
 @Composable
 fun LogDataTableView(
-    onRowClick: (List<String>) -> Unit,
+    onRowClick: (LogRow) -> Unit,
     isDarkTheme: MutableState<Boolean>,
     logFileReader: ILogFileReader = TextLogFileReader(),
     batchSize: Int = 100
 )
 {
     val filePath = LocalLogFilePath.current.value ?: return
-    var displayedRows by remember { mutableStateOf<List<List<String>>>(emptyList()) }
+    var displayedRows by remember { mutableStateOf<List<LogRow>>(emptyList()) }
     var loadingMore by remember { mutableStateOf(false) }
     var endOfFile by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -93,9 +94,9 @@ fun LogDataTableView(
                         ),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    row.forEach { cell ->
+                    row.forEach { cell: LogRow ->
                         Text(
-                            text = cell,
+                            text = cell.message?.trim() ?: "",
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )

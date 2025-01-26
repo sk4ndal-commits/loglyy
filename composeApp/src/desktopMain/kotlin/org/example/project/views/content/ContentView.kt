@@ -10,8 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import org.example.project.ui.sidebar.SidebarView
-import org.example.project.ui.tabs.TabsView
+import org.example.project.views.sidebar.SidebarView
+import org.example.project.views.tabs.TabsView
 
 @Composable
 fun ContentView(
