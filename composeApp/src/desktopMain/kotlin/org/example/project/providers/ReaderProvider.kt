@@ -2,7 +2,6 @@ package org.example.project.providers
 
 import ILogFileReader
 import org.example.project.readers.TextLogFileReader
-import java.nio.file.Path
 
 /**
  * Provides an instance of an appropriate log file reader based on the file type.
@@ -14,7 +13,7 @@ import java.nio.file.Path
  * @throws IllegalArgumentException if the provided file path does not represent
  * a supported file type.
  */
-class ReaderProvider
+class ReaderProvider : IReaderProvider
 {
     /**
      * Provides an appropriate log file reader instance based on the given file path.
@@ -27,7 +26,7 @@ class ReaderProvider
      * @return An instance of ILogFileReader suitable for processing the specified file type.
      * @throws IllegalArgumentException If the file type specified in the file path is not supported.
      */
-    fun getReader(filePath: String): ILogFileReader
+    override fun getReader(filePath: String): ILogFileReader
     {
         return if (filePath.endsWith(".txt")) TextLogFileReader() else throw IllegalArgumentException("Unsupported file type.")
     }

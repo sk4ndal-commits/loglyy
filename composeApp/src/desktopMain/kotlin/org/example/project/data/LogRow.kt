@@ -1,6 +1,8 @@
 package org.example.project.data
 
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 /**
  * Represents a single row in the log data, encapsulating details about a specific log event.
@@ -27,19 +29,32 @@ data class LogRow(
  * @return A list of LogRow objects constructed from the input batch. If any field in a row cannot be parsed or is missing, the corresponding LogRow field will be null.
  */
 fun parseBatch(batch: List<List<String>>): List<LogRow> {
+    val twentyFourHourFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val twelveFourHourFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss a")
+
     return batch.map { row ->
         LogRow(
             timeStamp = row.getOrNull(0)?.let {
                 try {
                     LocalDateTime.parse(it)
-                } catch (e: Exception) {
-                    null
+                } catch (_: DateTimeParseException) {
+                    try
+                    {
+                        LocalDateTime.parse(it, twentyFourHourFormat)
+                    } catch (_: DateTimeParseException) {
+                        try
+                        {
+                            LocalDateTime.parse(it, twelveFourHourFormat)
+                        } catch (_: DateTimeParseException) {
+                            null
+                        }
+                    }
                 }
             },
             level = row.getOrNull(1)?.let {
                 try {
                     LogLevel.valueOf(it.uppercase())
-                } catch (e: IllegalArgumentException) {
+                } catch (_: IllegalArgumentException) {
                     null
                 }
             },

@@ -10,9 +10,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.example.project.data.LogRow
 
 @Composable
-fun SidebarView(modifier: Modifier = Modifier, message: List<String>)
+fun SidebarView(modifier: Modifier = Modifier, logRow: LogRow)
 {
     Column(
         modifier = modifier
@@ -81,18 +82,7 @@ fun SidebarView(modifier: Modifier = Modifier, message: List<String>)
             color = MaterialTheme.colors.primary
         )
         LogMessageDetailView(
-            message = if (message.isEmpty()) "No Details Available" else message.last()
-        );
-    }
-}
-
-@Composable
-fun PlaceholderTab(text: String)
-{
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text)
+            message = logRow.detailMessage ?: "No details available"
+        )
     }
 }

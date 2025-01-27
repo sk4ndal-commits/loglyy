@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.example.project.data.FilterSettings
 import org.example.project.data.LogRow
-import org.example.project.providers.ReaderProvider
+import org.example.project.providers.IReaderProvider
 import java.time.LocalDateTime
 
 class LogDataTableViewModel(
-    private val readerProvider: ReaderProvider,
-    private val batchSize: Int = 1000
+    private val readerProvider: IReaderProvider,
+    private val batchSize: Int = 100
 ) : ViewModel()
 {
 
@@ -20,85 +20,116 @@ class LogDataTableViewModel(
     val rows: StateFlow<List<LogRow>> = _rows
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading;
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _endOfFile = MutableStateFlow(false)
-    val endOfFile: StateFlow<Boolean> = _endOfFile;
+    val endOfFile: StateFlow<Boolean> = _endOfFile
 
     private val _filter = MutableStateFlow<String?>(null)
-    val filter: StateFlow<String?> = _filter;
+    val filter: StateFlow<String?> = _filter
 
     private var filePath: String? = null
+
+    private var cursorPosition: Int = 0
 
 
     fun setFilePath(filePath: String)
     {
-        this.filePath = filePath;
-        this.loadInitialRows(FilterSettings());
+        this.filePath = filePath
+        this.loadInitialRows(FilterSettings())
     }
 
-    private fun loadInitialRows(filterSettings: FilterSettings) {
-        this.filePath?.let { path ->
+    private suspend fun readRows(
+        filterSettings: FilterSettings,
+        initialize: Boolean
+    )
+    {
+        filePath?.let { path ->
             val reader = readerProvider.getReader(path)
-            _isLoading.value = true
-            _endOfFile.value = false
 
-            viewModelScope.launch {
-                val filteredBatch = mutableListOf<LogRow>()
+            // If initialize is true, reset cursor and rows
+            if (initialize)
+            {
+                _rows.value = emptyList() // Clear existing rows
+                cursorPosition = 0        // Reset cursor to beginning of the file
+                _endOfFile.value = false
+            }
 
-                reader.process(path, batchSize).collect { batch ->
-                    if (batch.isEmpty()) {
+            val totalRows = _rows.value.toMutableList() // Use existing rows if not initializing
+            var linesSkipped = 0 // Track how many rows are skipped in loadMoreRows
+
+            reader.process(path, batchSize).collect { batch ->
+                if (initialize)
+                {
+                    // For `loadInitialRows`, we just start reading right away
+                    if (batch.isEmpty())
+                    {
                         _endOfFile.value = true
-                    } else {
-                        // Filter the batch
-                        val filtered = applyFilters(batch, filterSettings)
-                        filteredBatch.addAll(filtered)
-
-                        // Keep reading until we have at least `batchSize` rows or EOF
-                        if (filteredBatch.size >= batchSize || _endOfFile.value) {
-                            _rows.value = filteredBatch.take(batchSize) // Take only up to batch size
-                            _isLoading.value = false
-                            return@collect
-                        }
+                        return@collect
+                    }
+                } else
+                {
+                    // For `loadMoreRows`, skip already-read rows
+                    if (linesSkipped < cursorPosition)
+                    {
+                        linesSkipped += batch.size
+                        return@collect
                     }
                 }
-                _isLoading.value = false
+
+                // If we receive an empty batch, we've reached EOF
+                if (batch.isEmpty())
+                {
+                    _endOfFile.value = true
+                    return@collect
+                }
+
+                // Apply filters to rows in the current batch
+                val filtered = applyFilters(batch, filterSettings)
+
+                // Append new rows to the collection
+                totalRows.addAll(filtered)
+                cursorPosition += batch.size // Update the cursor
+
+                // Update data in the state flow
+                _rows.value = totalRows
+
+                // If fewer rows than `batchSize` were returned, EOF might have been reached
+                if (batch.size < batchSize)
+                {
+                    _endOfFile.value = true
+                    return@collect
+                }
             }
+
+            // End the loading state after all batches are processed
+            _isLoading.value = false
         }
     }
 
-    fun loadMoreRows(filterSettings: FilterSettings) {
-        if (_isLoading.value || _endOfFile.value) return
-
-        this.filePath?.let { path ->
-            val reader = readerProvider.getReader(path)
-            _isLoading.value = true
-
-            viewModelScope.launch {
-                val filteredBatch = _rows.value.toMutableList()
-
-                reader.process(path, batchSize).collect { batch ->
-                    if (batch.isEmpty()) {
-                        _endOfFile.value = true
-                    } else {
-                        // Filter the batch and add to the accumulated filtered rows
-                        val filtered = applyFilters(batch, filterSettings)
-                        filteredBatch.addAll(filtered)
-
-                        // Keep reading until filteredBatch reaches `batchSize` or EOF
-                        if (filteredBatch.size >= _rows.value.size + batchSize || _endOfFile.value) {
-                            _rows.value = filteredBatch.take(_rows.value.size + batchSize) // Ensure added rows match total batchSize
-                            _isLoading.value = false
-                            return@collect
-                        }
-                    }
-                }
-                _isLoading.value = false
-            }
+    // Load the initial rows (wrapper around `readRows`)
+    private fun loadInitialRows(filterSettings: FilterSettings)
+    {
+        if (filePath == null) return
+        _isLoading.value = true
+        viewModelScope.launch {
+            readRows(filterSettings, initialize = true) // Reset cursor and clear rows
         }
     }
 
-    private fun applyFilters(rows: List<LogRow>, filterSettings: FilterSettings): List<LogRow> {
+    // Load additional rows lazily when scrolling (wrapper around `readRows`)
+    fun loadMoreRows(filterSettings: FilterSettings)
+    {
+        if (_isLoading.value || _endOfFile.value || filePath == null) return
+        _isLoading.value = true
+        viewModelScope.launch {
+            readRows(filterSettings, initialize = false) // Continue from current cursor
+        }
+    }
+
+
+    private fun applyFilters(rows: List<LogRow>, filterSettings: FilterSettings): List<LogRow>
+    {
         return rows.filter { row ->
             // Text filtering: Match if any non-null field in LogRow contains the filterText
             val matchesText = filterSettings.filterText?.let { text ->
@@ -108,7 +139,7 @@ class LogDataTableViewModel(
                     row.source,
                     row.message,
                     row.detailMessage
-                ).any { it.contains(text, ignoreCase = filterSettings.ignoreCase ?: true) }
+                ).any { it.contains(text, ignoreCase = filterSettings.ignoreCase) }
             } ?: true
 
             // Date range filtering: Check timeStamp is within range only if provided
@@ -125,15 +156,6 @@ class LogDataTableViewModel(
 
             // Combine all filters
             matchesText && matchesDateRange && matchesLogLevel
-        }
-    }
-
-    // Helper: Convert a string to LocalDateTime (if valid)
-    private fun String.toLocalDateTimeOrNull(): LocalDateTime? {
-        return try {
-            LocalDateTime.parse(this) // Adjust the parsing format if needed
-        } catch (e: Exception) {
-            null
         }
     }
 }

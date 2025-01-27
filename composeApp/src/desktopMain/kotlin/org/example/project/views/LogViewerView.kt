@@ -12,11 +12,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.example.project.providers.ReaderProvider
 import org.example.project.views.footer.FooterView
 import org.example.project.views.header.HeaderView
 
 @Composable
-fun LogViewerView(isDarkTheme: MutableState<Boolean>)
+fun LogViewerView(isDarkTheme: MutableState<Boolean>, readerProvider: ReaderProvider)
 {
     // Centralized state for the selected log file path
     val currentLogFilePath = remember { mutableStateOf<String?>(null) }
@@ -44,7 +45,8 @@ fun LogViewerView(isDarkTheme: MutableState<Boolean>)
                 // Pass the current log file path to ContentView
                 ContentView(
                     currentLogFilePath = currentLogFilePath,
-                    isDarkTheme = isDarkTheme
+                    isDarkTheme = isDarkTheme,
+                    readerProvider = readerProvider
                 )
             }
         },

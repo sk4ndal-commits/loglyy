@@ -10,20 +10,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import org.example.project.data.LogRow
+import org.example.project.providers.ReaderProvider
 import org.example.project.views.sidebar.SidebarView
 import org.example.project.views.tabs.TabsView
 
 @Composable
 fun ContentView(
     currentLogFilePath: MutableState<String?>,
-    isDarkTheme: MutableState<Boolean>
+    isDarkTheme: MutableState<Boolean>,
+    readerProvider: ReaderProvider
 )
 {
     // Sidebar and Tabs weights
     var sidebarWeight by remember { mutableStateOf(0.25f) }
-    var message by remember { mutableStateOf(listOf<String>()) }
-    val minWeight = 0.1f // Minimum weight for Sidebar/Tabs
-    val maxWeight = 0.9f // Maximum weight for Sidebar/Tabs
+    var message by remember { mutableStateOf(LogRow()) }
+    val minWeight = 0.1f
+    val maxWeight = 0.9f
 
     // Provide the log file path via CompositionLocalProvider
     CompositionLocalProvider(LocalLogFilePath provides currentLogFilePath) {
@@ -31,7 +34,7 @@ fun ContentView(
             // SidebarView that reacts to the current log file path
             SidebarView(
                 modifier = Modifier.weight(sidebarWeight),
-                message = message
+                logRow = message
             )
 
             // Draggable divider for resizing the Sidebar and Tabs
@@ -57,7 +60,8 @@ fun ContentView(
             TabsView(
                 modifier = Modifier.weight(1f - sidebarWeight),
                 onRowClicked = { message = it },
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                readerProvider = readerProvider
             )
         }
     }

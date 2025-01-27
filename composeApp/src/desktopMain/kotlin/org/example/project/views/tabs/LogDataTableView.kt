@@ -1,10 +1,9 @@
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.Divider
+import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,40 +11,39 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.example.project.data.LogRow
-import org.example.project.readers.TextLogFileReader
+import org.example.project.viewmodels.LogDataTableViewModel
+
+fun getSelectedLineColor(selectedRowIndex: Int, currentIndex: Int, isDarkTheme: MutableState<Boolean>): Color
+{
+    return if (selectedRowIndex == currentIndex)
+    {
+        if (isDarkTheme.value) Color.DarkGray else Color.LightGray
+    } else
+    {
+        Color.Transparent
+    }
+}
 
 @Composable
 fun LogDataTableView(
     onRowClick: (LogRow) -> Unit,
     isDarkTheme: MutableState<Boolean>,
-    logFileReader: ILogFileReader = TextLogFileReader(),
-    batchSize: Int = 100
+    viewModel: LogDataTableViewModel = viewModel() // Fetch the ViewModel
 )
 {
-    val filePath = LocalLogFilePath.current.value ?: return
-    var displayedRows by remember { mutableStateOf<List<LogRow>>(emptyList()) }
-    var loadingMore by remember { mutableStateOf(false) }
-    var endOfFile by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    // Observe state from the ViewModel
+    val rows by viewModel.rows.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val endOfFile by viewModel.endOfFile.collectAsState()
 
+    val filePath = LocalLogFilePath.current.value ?: return
     var selectedRowIndex by remember { mutableStateOf(-1) }
 
-    DisposableEffect(filePath) {
-        val job = scope.launch {
-            logFileReader.process(filePath, batchSize).collect { batch ->
-                if (batch.isEmpty())
-                {
-                    endOfFile = true
-                } else
-                {
-                    displayedRows = displayedRows + batch
-                    loadingMore = false
-                }
-            }
-        }
-        onDispose { job.cancel() }
+    // Set file path to the ViewModel
+    LaunchedEffect(filePath) {
+        viewModel.setFilePath(filePath)
     }
 
     Column(Modifier.padding(16.dp)) {
@@ -75,9 +73,12 @@ fun LogDataTableView(
         Divider(Modifier.fillMaxWidth(), thickness = 2.dp, color = Color.Gray)
 
         // Scrollable LazyColumn to display rows of data
-        LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(displayedRows) { index, row ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(rows) { index, row ->
                 Row(
+                    // Existing row rendering logic
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
@@ -86,7 +87,7 @@ fun LogDataTableView(
                             onRowClick(row)
                         }
                         .background(
-                            GetSelectedLineColor(
+                            getSelectedLineColor(
                                 selectedRowIndex,
                                 index,
                                 isDarkTheme
@@ -94,38 +95,24 @@ fun LogDataTableView(
                         ),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    row.forEach { cell: LogRow ->
+                    listOf(
+                        row.timeStamp?.toString() ?: "N/A",
+                        row.level?.name ?: "N/A",
+                        row.source ?: "N/A",
+                        row.message ?: "N/A",
+                        row.detailMessage ?: "N/A"
+                    ).forEach { cell ->
                         Text(
-                            text = cell.message?.trim() ?: "",
+                            text = cell,
                             fontSize = 12.sp,
                             modifier = Modifier.weight(1f)
                         )
                     }
                 }
-
-                // Trigger loading next batch lazily when scrolling reaches the bottom
-                if (index == displayedRows.lastIndex && !loadingMore && !endOfFile)
-                {
-                    loadingMore = true
-                    scope.launch {
-                        logFileReader.process(filePath, batchSize)
-                            .collect { batch ->
-                                if (batch.isEmpty())
-                                {
-                                    endOfFile = true
-                                } else
-                                {
-                                    displayedRows = displayedRows + batch
-                                    loadingMore = false
-                                }
-                            }
-                    }
-                }
             }
 
-            // "Loading more" indicator when incrementally loading rows
-            if (loadingMore)
-            {
+            // Loading & EOF indicators remain unchanged
+            if (isLoading) {
                 item {
                     Text(
                         text = "Loading more...",
@@ -136,10 +123,7 @@ fun LogDataTableView(
                     )
                 }
             }
-
-            // End of file indicator when all data is loaded
-            if (endOfFile && displayedRows.isNotEmpty())
-            {
+            if (endOfFile && rows.isNotEmpty()) {
                 item {
                     Text(
                         text = "End of file reached",
@@ -153,25 +137,4 @@ fun LogDataTableView(
             }
         }
     }
-}
-
-fun GetSelectedLineColor(
-    selectedRowIndex: Int,
-    index: Int,
-    isDarkTheme: MutableState<Boolean>
-): Color
-{
-
-    if (selectedRowIndex == index)
-    {
-        return if (isDarkTheme.value)
-        {
-            Color.DarkGray
-        } else
-        {
-            Color.LightGray
-        }
-    }
-
-    return Color.Transparent
 }

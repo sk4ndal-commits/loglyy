@@ -14,6 +14,9 @@ kotlin {
         
         commonMain.dependencies {
             implementation("androidx.collection:collection:1.2.0")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+            implementation("org.mockito:mockito-inline:4.11.0")
+            implementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
@@ -22,6 +25,9 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(kotlin("test"))
+            implementation(libs.junit.junit)
+            implementation(libs.junit.jupiter)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
