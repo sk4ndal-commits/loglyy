@@ -15,22 +15,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.example.project.data.LogRow
 import org.example.project.viewmodels.LogDataTableViewModel
 
-fun getSelectedLineColor(selectedRowIndex: Int, currentIndex: Int, isDarkTheme: MutableState<Boolean>): Color
-{
-    return if (selectedRowIndex == currentIndex)
-    {
-        if (isDarkTheme.value) Color.DarkGray else Color.LightGray
-    } else
-    {
-        Color.Transparent
-    }
-}
 
 @Composable
 fun LogDataTableView(
     onRowClick: (LogRow) -> Unit,
     isDarkTheme: MutableState<Boolean>,
-    viewModel: LogDataTableViewModel = viewModel() // Fetch the ViewModel
+    viewModel: LogDataTableViewModel = viewModel()
 )
 {
     // Observe state from the ViewModel
@@ -136,5 +126,16 @@ fun LogDataTableView(
                 }
             }
         }
+    }
+}
+
+fun getSelectedLineColor(selectedRowIndex: Int, currentIndex: Int, isDarkTheme: MutableState<Boolean>): Color
+{
+    return if (selectedRowIndex == currentIndex)
+    {
+        if (isDarkTheme.value) Color.DarkGray else Color.LightGray
+    } else
+    {
+        Color.Transparent
     }
 }
